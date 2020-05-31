@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style>
+        .main{
+            text-align: center; /*让div内部文字居中*/
+            background-color: #fff;
+            /*width: 75%;*/
+            /*height: 350px;*/
+            margin-left: 2%;
+            /*margin-right: 2%;*/
+            margin-top: 2%;
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        .td{
+            font-family: sans-serif;
+            text-align: center;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+        .bd{
+            border-collapse: separate;
+            border: 1px solid black;
+            /*border-spacing: 0 10px;*/
+        }
+    </style>
+</head>
+<body id="content">
+<div>
+    <table class="main">
+        <tr class="bd" style="background: azure">
+            <td class="td bd" onclick="location='/sc'">学生选课信息表</td>
+        </tr>
+        <tr></tr>
+        <tr class="bd" style="background: azure">
+            <td class="td bd" onclick="location='/student'">学生基本信息表</td>
+        </tr>
+        <tr></tr>
+        <tr class="bd" style="background: azure">
+            <td class="td bd" onclick="location='/course'">课程基本信息表</td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>

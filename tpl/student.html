@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>学生基本信息表</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style>
+        .divf {
+            width: 200px;
+            height: 100px;
+            background: transparent;
+            float: contour;
+        }
+
+        .main {
+            text-align: center; /*让div内部文字居中*/
+            background-color: #fff;
+            /*width: 75%;*/
+            /*height: 350px;*/
+            margin-left: 2%;
+            /*margin-right: 2%;*/
+            margin-top: 2%;
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .td {
+            font-family: sans-serif;
+            text-align: center;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .bd {
+            border-collapse: collapse;
+            border: 1px solid black;
+            border-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+<table class="main">
+    <tr class="bd" style="background: azure">
+        <td class="td bd" onclick="location='/'">Home</td>
+        <td class="td bd" onclick="location='/sc'">学生选课信息表</td>
+        <td class="td bd" onclick="location='/student'">学生基本信息表</td>
+        <td class="td bd" onclick="location='/course'">课程基本信息表</td>
+    </tr>
+</table>
+
+<table style="margin-left: 2%;margin-top: 2%;position: relative;">
+    <tr>
+        <td style="padding-right: 40px; padding-bottom: 20px">
+            <table>
+                <tr>
+                    <td id="stu_form"></td>
+                </tr>
+            </table>
+            <br />
+            <table>
+                <tr class="bd">
+                    <td class="td bd" style="background: azure"
+                        onclick="s_new()">新增
+                    </td>
+                    <td class="td bd" style="background: azure"
+                        onclick="s_delete()">删除
+                    </td>
+                    <td class="td bd" style="background: azure"
+                        onclick="s_change()">修改
+                    </td>
+                    <td class="td bd" style="background: azure"
+                        onclick="location='/'">关闭
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <form>
+                <table id="stu_list">
+                </table>
+            </form>
+        </td>
+    </tr>
+</table>
+</body>
+<script>
+    String.prototype.format= function(){
+        let args = Array.prototype.slice.call(arguments);
+        let count=0;
+        return this.replace(/%s/g,function(){
+            return args[count++];
+        });
+    }
+
+    let input = document.getElementById('stu_form');
+    let stu_list = document.getElementById('stu_list');
+
+    function s_new() {
+        input.innerHTML = `
+<form method="post" id="stu_forms">
+    <label>学号：
+        <input type="text" name="xh" placeholder="学号">
+    </label><br /><br />
+    <label>姓名：
+        <input type="text" name="xm" placeholder="姓名">
+    </label><br /><br />
+    <label>年龄：
+        <input type="number" name="age" placeholder="年龄">
+    </label><br /><br />
+    <label>性别：
+        <select name="xb">
+            <option value="男">男</option>
+            <option value="女">女</option>
+        </select>
+    </label><br /><br />
+    <label>系别：
+        <input type="text" name="sdept" placeholder="系别">
+    </label><br /><br />
+    <button type="button" onclick="post('/post_stu', formValue('stu_forms'), s_new_post)">提交</button>
+</form>
+`
+    }
+    function s_new_post(data) {
+        alert(data);
+        input.innerHTML = ""
+        get("/stu_list", update_list);
+    }
+
+    let del_set = new Set();
+    function getSet() {
+        let qu = "[";
+        for(let v of del_set) {
+            qu += '"' + v + '",';
+        }
+        qu = qu.substr(0, qu.length-1);
+        qu += "]"
+        return qu;
+    }
+    function s_delete() {
+        if (del_set.size === 0) {
+            alert("请先鼠标左键单击选择需要删除的学生");
+            return
+        }
+        let qu = getSet();
+        let res = confirm("若删除学生信息，则有关其选课的信息都将被删除！\n是否删除以下学号的学生信息："+qu);
+        if (res === false) {
+            return
+        }
+        post('/delete_stu', "xh="+qu, s_new_post)
+    }
+    // function s_del_post(data) {
+    //     alert(data);
+    //     get("/stu_list", update_list);
+    // }
+
+    function s_change() {
+        if (del_set.size !== 1) {
+            alert("只能选择一名需要修改的学生");
+            return
+        }
+        let qu = getSet();
+        let res = confirm("是否修改以下学号的学生信息："+qu);
+        if (res === false) {
+            return
+        }
+        s_change_display_form();
+    }
+    function s_change_display_form() {
+        let cel = document.getElementById(del_set.values().next().value).cells
+        input.innerHTML = `
+<form method="post" id="stu_forms">
+    <label style="display: none">
+        <input type="text" name="xh_s" id="xh_s" value="%s" ">
+    </label>
+    <label>学号：
+        <input type="text" name="xh" id="xh" value="%s" placeholder="学号">
+    </label><br /><br />
+    <label>姓名：
+        <input type="text" name="xm" id="xm" value="%s" placeholder="姓名">
+    </label><br /><br />
+    <label>年龄：
+        <input type="number" name="age" id="age" value="%s" placeholder="年龄">
+    </label><br /><br />
+    <label>性别：
+        <select name="xb" id="xb">
+            <option value="男">男</option>
+            <option value="女">女</option>
+        </select>
+    </label><br /><br />
+    <label>系别：
+        <input type="text" name="sdept" id="sdept"  value="%s" placeholder="系别">
+    </label><br /><br />
+    <button type="button" onclick="post('/update_stu', formValue('stu_forms'), s_new_post)">提交</button>
+</form>
+`.format(cel[0].innerText, cel[0].innerText, cel[1].innerText, cel[2].innerText, cel[4].innerText);
+        document.getElementById("xb")[cel[3].innerText==="男"?0:1].selected = true;
+    }
+
+    function update_list(str) {
+        let data = JSON.parse(str);
+        let html = `
+<tr class="bd">
+    <td class="td bd" style="background: darkgray">学号</td>
+    <td class="td bd" style="background: darkgray">姓名</td>
+    <td class="td bd" style="background: darkgray">年龄</td>
+    <td class="td bd" style="background: darkgray">性别</td>
+    <td class="td bd" style="background: darkgray">系别</td>
+</tr>
+`;
+
+        for(let i = 0; i < data.length; ++i) {
+            html += `
+<tr class="bd" id="%s" onclick="del_red('%s')">
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+</tr>
+`.format(data[i].xh, data[i].xh, data[i].xh, data[i].xm,
+                data[i].age, data[i].xb, data[i].sdept);
+        }
+
+        stu_list.innerHTML = html;
+        del_set.clear();
+    }
+
+    /**
+     * 将标签背景修改为红色并将id加入set
+     * 还原被修改为红色的标签，将id从set中删除
+     * @param id 标签id
+     */
+    function del_red(id) {
+        if (del_set.has(id)) {
+            document.getElementById(id).style.background = '';
+            del_set.delete(id);
+        } else {
+            document.getElementById(id).style.background = 'red';
+            del_set.add(id);
+        }
+    }
+
+</script>
+
+<script>
+    /**
+     * 发送POST请求
+     * @param url 请求URL
+     * @param formvalue 需要发送的数据
+     * @param func 返回信息处理函数
+     */
+    function post(url, formvalue, func) {
+        let httpRequest = new XMLHttpRequest();
+        httpRequest.open('POST', url, true);
+        httpRequest.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+        httpRequest.send(formvalue);
+        httpRequest.onreadystatechange = function () {
+            if (httpRequest.readyState === 4 && httpRequest.status === 200) {
+                func(httpRequest.responseText);
+            }
+        };
+    }
+
+    /**
+     * 发送GET请求
+     * @param url 请求URL
+     * @param func 返回信息处理函数
+     */
+    function get(url, func) {
+        let httpRequest = new XMLHttpRequest();
+        httpRequest.open('GET', url, true);
+        httpRequest.send();
+        httpRequest.onreadystatechange = function () {
+            if (httpRequest.readyState === 4 && httpRequest.status === 200) {
+                func(httpRequest.responseText);
+            }
+        };
+    }
+
+    /**
+     * 获取表单的值，拼接成字符串返回
+     * @param formId 表单ID
+     * @returns {string} 拼接成字符串的值
+     */
+    function formValue(formId){
+        const formObj = document.getElementById(formId);
+        let name, value, postString = "";
+        if (formObj.elements.length) {
+            for (let i = 0; i < formObj.length; i++ ){
+                let singleObj = formObj[i];
+                if(singleObj.type !== "reset" && singleObj.type !== "submit"
+                    && singleObj.type !== "button"){
+                    if(singleObj.type==="radio"||singleObj.type==="checkbox"){
+                        if(singleObj.checked){
+                            name=singleObj.name;
+                            value=singleObj.value;
+                            postString=postString+name+"="+value+"&";
+                        }
+                    }else{
+                        name=singleObj.name;
+                        value=singleObj.value;
+                        postString=postString+name+"="+value+"&";
+                    }
+                }
+            }
+        }
+        return postString.substr(0, postString.length - 1);
+    }
+</script>
+
+<script>
+    get("/stu_list", update_list);
+</script>
+</html>

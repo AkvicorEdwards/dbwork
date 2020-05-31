@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>学生选课信息表</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style>
+        .divf {
+            width: 200px;
+            height: 100px;
+            background: transparent;
+            float: contour;
+        }
+
+        .main {
+            text-align: center; /*让div内部文字居中*/
+            background-color: #fff;
+            /*width: 75%;*/
+            /*height: 350px;*/
+            margin-left: 2%;
+            /*margin-right: 2%;*/
+            margin-top: 2%;
+            position: relative;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .td {
+            font-family: sans-serif;
+            text-align: center;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .bd {
+            border-collapse: collapse;
+            border: 1px solid black;
+            border-spacing: 1px;
+        }
+    </style>
+</head>
+<body id="content">
+<table class="main" >
+    <tr class="bd" style="background: azure">
+        <td class="td bd" onclick="location='/'">Home</td>
+        <td class="td bd" onclick="location='/sc'">学生选课信息表</td>
+        <td class="td bd" onclick="location='/student'">学生基本信息表</td>
+        <td class="td bd" onclick="location='/course'">课程基本信息表</td>
+    </tr>
+</table>
+
+<table style="margin-left: 2%; margin-top: 2%; position: relative;">
+    <tr>
+        <td style="padding-right: 40px">
+            <form id="sc_form">
+                <label>
+                    <input type="text" name="xh" id="input_xh" placeholder="学号">
+                </label>
+            </form>
+        </td>
+        <td style="padding-right: 40px;">
+            <table>
+                <tr class="bd" >
+                    <td class="td bd" style="background: azure" onclick="inquire()">查询</td>
+                </tr>
+                <tr class="bd" >
+                    <td class="td bd" style="background: azure" onclick="chooseCourse()">选课</td>
+                </tr>
+                <tr class="bd" >
+                    <td class="td bd" style="background: azure" onclick="undoCourse()">退课</td>
+                </tr>
+                <tr class="bd" >
+                    <td class="td bd" style="background: azure" onclick="location='/'">关闭</td>
+                </tr>
+                <tr class="bd" >
+                    <td class="td bd" style="background: azure" onclick="clean()">清除</td>
+                </tr>
+            </table>
+        </td>
+        <td >
+            <form >
+                <h4>学生详细信息</h4>
+                <table>
+                    <tr class="bd" >
+                        <td class="td bd" style="background: darkgray">学号</td>
+                        <td class="td bd" id="info_xh"></td>
+                    </tr>
+                    <tr class="bd" >
+                        <td class="td bd" style="background: darkgray">姓名</td>
+                        <td class="td bd" id="info_xm"></td>
+                    </tr>
+                    <tr class="bd" >
+                        <td class="td bd" style="background: darkgray">年龄</td>
+                        <td class="td bd" id="info_age"></td>
+                    </tr>
+                    <tr class="bd" >
+                        <td class="td bd" style="background: darkgray">性别</td>
+                        <td class="td bd" id="info_xb"></td>
+                    </tr>
+                    <tr class="bd" >
+                        <td class="td bd" style="background: darkgray">系别</td>
+                        <td class="td bd" id="info_sdept"></td>
+                    </tr>
+                </table>
+            </form>
+        </td>
+    </tr>
+</table>
+
+<table style="margin-left: 2%; margin-top: 2%; position: relative;">
+    <tr>
+        <td style="padding-right: 40px;vertical-align: top;">
+            <form >
+                <h4>可选课程</h4>
+                <table id="unowned_list"></table>
+            </form>
+        </td>
+        <td style="vertical-align: top;">
+            <form >
+                <h4>已选课程</h4>
+                <table id="owned_list"></table>
+            </form>
+        </td>
+    </tr>
+</table>
+
+</body>
+
+<script>
+    let input = document.getElementById('sc_form');
+    let owned_list = document.getElementById('owned_list');
+    let unowned_list = document.getElementById('unowned_list');
+    let owned_set = new Set();
+    let unowned_set = new Set();
+    function clean() {
+        document.getElementById('input_xh').value = "";
+        update_owned_list("");
+        update_unowned_list("");
+        update_user_info("");
+    }
+    function inquire() {
+        let xh = document.getElementById('input_xh').value;
+        get("/stu_info?xh="+xh, update_user_info);
+        get("/owned_list?xh="+xh, update_owned_list);
+        get("/unowned_list?xh="+xh, update_unowned_list);
+    }
+    function getOwnedSet() {
+        let qu = "[";
+        for(let v of owned_set) {
+            qu += '"' + v + '",';
+        }
+        qu = qu.substr(0, qu.length-1);
+        qu += "]"
+        return qu;
+    }
+    function getUnownedSet() {
+        let qu = "[";
+        for(let v of unowned_set) {
+            qu += '"' + v + '",';
+        }
+        qu = qu.substr(0, qu.length-1);
+        qu += "]"
+        return qu;
+    }
+    function update_owned_list(str) {
+        let html = `
+<tr class="bd" >
+    <td class="td bd" style="background: darkgray">学号</td>
+    <td class="td bd" style="background: darkgray">课程号</td>
+    <td class="td bd" style="background: darkgray">成绩</td>
+</tr>
+`;
+        if(str.length <= 2) {
+            owned_list.innerHTML = html;
+            owned_set.clear();
+            return;
+        }
+
+        let data = JSON.parse(str);
+
+        for(let i = 0; i < data.length; ++i) {
+            html += `
+<tr class="bd" id="owned_%s" onclick="owned_red('%s')">
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+</tr>
+`.format(data[i].ch, data[i].ch, data[i].xh, data[i].ch, data[i].g);
+        }
+
+        owned_list.innerHTML = html;
+        owned_set.clear();
+    }
+    function update_unowned_list(str) {
+        let html = `
+<tr class="bd" >
+    <td class="td bd" style="background: darkgray">课程号</td>
+    <td class="td bd" style="background: darkgray">课程名</td>
+    <td class="td bd" style="background: darkgray">学分</td>
+</tr>
+`;
+        if(str.length <= 2) {
+            unowned_list.innerHTML = html;
+            unowned_set.clear();
+            return;
+        }
+
+        let data = JSON.parse(str);
+
+        for(let i = 0; i < data.length; ++i) {
+            html += `
+<tr class="bd" id="unowned_%s" onclick="unowned_red('%s')">
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+    <td class="td bd">%s</td>
+</tr>
+`.format(data[i].ch, data[i].ch, data[i].ch, data[i].cm, data[i].xf);
+        }
+
+        unowned_list.innerHTML = html;
+        unowned_set.clear();
+    }
+    function update_user_info(str) {
+        if(str.length <= 2) {
+            document.getElementById('info_xh').innerText = "";
+            document.getElementById('info_xm').innerText = "";
+            document.getElementById('info_age').innerText = "";
+            document.getElementById('info_xb').innerText = "";
+            document.getElementById('info_sdept').innerText = "";
+            return
+        }
+
+        let data = JSON.parse(str);
+        document.getElementById('info_xh').innerText = data.xh;
+        document.getElementById('info_xm').innerText = data.xm;
+        document.getElementById('info_age').innerText = data.age;
+        document.getElementById('info_xb').innerText = data.xb;
+        document.getElementById('info_sdept').innerText = data.sdept;
+    }
+
+    function chooseCourse() {
+        if (unowned_set.size === 0) {
+            alert("请先鼠标左键单击选择想要选择的课程");
+            return
+        }
+        let qu = getUnownedSet();
+        let res = confirm("是否选择以下课程号的课程："+qu);
+        if (res === false) {
+            return
+        }
+        let xh = document.getElementById('input_xh').value;
+        post('/choose_course', "xh="+xh+"&ch="+qu, sc_new_post)
+    }
+
+    function undoCourse() {
+        if (owned_set.size === 0) {
+            alert("请先鼠标左键单击选择想要取消选择的课程");
+            return
+        }
+        let qu = getOwnedSet();
+        let res = confirm("是否取消选择以下课程号的课程："+qu);
+        if (res === false) {
+            return
+        }
+        let xh = document.getElementById('input_xh').value;
+        post('/undo_course', "xh="+xh+"&ch="+qu, sc_new_post)
+    }
+
+    function sc_new_post(data) {
+        alert(data);
+        let xh = document.getElementById('input_xh').value;
+        get("/owned_list?xh="+xh, update_owned_list);
+        get("/unowned_list?xh="+xh, update_unowned_list);
+    }
+
+    /**
+     * 将标签背景修改为红色并将id加入set
+     * 还原被修改为红色的标签，将id从set中删除
+     * @param id 标签id
+     */
+    function owned_red(id) {
+        if (owned_set.has(id)) {
+            document.getElementById("owned_"+id).style.background = '';
+            owned_set.delete(id);
+        } else {
+            document.getElementById("owned_"+id).style.background = 'red';
+            owned_set.add(id);
+        }
+    }
+    /**
+     * 将标签背景修改为红色并将id加入set
+     * 还原被修改为红色的标签，将id从set中删除
+     * @param id 标签id
+     */
+    function unowned_red(id) {
+        if (unowned_set.has(id)) {
+            document.getElementById("unowned_"+id).style.background = '';
+            unowned_set.delete(id);
+        } else {
+            document.getElementById("unowned_"+id).style.background = 'red';
+            unowned_set.add(id);
+        }
+    }
+</script>
+
+<script>
+    /**
+     * 发送POST请求
+     * @param url 请求URL
+     * @param formvalue 需要发送的数据
+     * @param func 返回信息处理函数
+     */
+    function post(url, formvalue, func) {
+        let httpRequest = new XMLHttpRequest();
+        httpRequest.open('POST', url, true);
+        httpRequest.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+        httpRequest.send(formvalue);
+        httpRequest.onreadystatechange = function () {
+            if (httpRequest.readyState === 4 && httpRequest.status === 200) {
+                func(httpRequest.responseText);
+            }
+        };
+    }
+
+    /**
+     * 发送GET请求
+     * @param url 请求URL
+     * @param func 返回信息处理函数
+     */
+    function get(url, func) {
+        let httpRequest = new XMLHttpRequest();
+        httpRequest.open('GET', url, true);
+        httpRequest.send();
+        httpRequest.onreadystatechange = function () {
+            if (httpRequest.readyState === 4 && httpRequest.status === 200) {
+                func(httpRequest.responseText);
+            }
+        };
+    }
+
+    /**
+     * 获取表单的值，拼接成字符串返回
+     * @param formId 表单ID
+     * @returns {string} 拼接成字符串的值
+     */
+    function formValue(formId){
+        const formObj = document.getElementById(formId);
+        let name, value, postString = "";
+        if (formObj.elements.length) {
+            for (let i = 0; i < formObj.length; i++ ){
+                let singleObj = formObj[i];
+                if(singleObj.type !== "reset" && singleObj.type !== "submit"
+                    && singleObj.type !== "button"){
+                    if(singleObj.type==="radio"||singleObj.type==="checkbox"){
+                        if(singleObj.checked){
+                            name=singleObj.name;
+                            value=singleObj.value;
+                            postString=postString+name+"="+value+"&";
+                        }
+                    }else{
+                        name=singleObj.name;
+                        value=singleObj.value;
+                        postString=postString+name+"="+value+"&";
+                    }
+                }
+            }
+        }
+        return postString.substr(0, postString.length - 1);
+    }
+
+    String.prototype.format= function(){
+        let args = Array.prototype.slice.call(arguments);
+        let count=0;
+        return this.replace(/%s/g,function(){
+            return args[count++];
+        });
+    }
+</script>
+
+<script>
+    inquire();
+</script>
+
+</html>
