@@ -97,9 +97,7 @@ create table sc
 	xh char(10) null comment 'Student id',
 	ch char(2) null comment 'Curriculum ID',
 	g DECIMAL(4,1) null comment 'Curriculum score',
-	constraint sc_course_ch_fk
-		foreign key (ch) references course (ch),
-	constraint sc_students_xh_fk
-		foreign key (xh) references students (xh)
+	constraint sc_course_ch_fk foreign key (ch) references course (ch),
+	constraint sc_students_xh_fk foreign key (xh) references students (xh)
 );
 ```
